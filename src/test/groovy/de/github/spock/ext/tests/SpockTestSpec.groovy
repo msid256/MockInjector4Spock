@@ -2,8 +2,10 @@ package de.github.spock.ext.tests
 
 import de.github.spock.ext.annotation.InjectMocks
 import de.github.spock.ext.annotation.Mock
+import spock.lang.Ignore
 import spock.lang.Specification
 
+@Ignore
 class SpockTestSpec extends Specification{
 
     @Mock
