@@ -12,7 +12,6 @@ class SpockTestSpec extends Specification{
     private TestSubject testSubject
 
     def setup(){
-        println "Nothing to do"
     }
 
     def 'Mock is initialized and not null'(){
