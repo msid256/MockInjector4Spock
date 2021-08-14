@@ -23,11 +23,14 @@ class MockInjector4Spock implements IGlobalExtension{
             }
         }
         if( containsAnnotations ){
-            spec.addInitializerInterceptor( new MethodInterceptor(spec) )
+            spec.addInitializerInterceptor( new MethodInterceptor( spec ) )
         }
     }
 
+    @Override
     void start(){}
+
+    @Override
     void stop(){}
 
 }

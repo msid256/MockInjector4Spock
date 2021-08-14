@@ -1,8 +1,17 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.eriwen:gradle-cobertura-plugin:1.1.1'
+    }
+}
+
 plugins{
-    id 'jacoco'
     id 'groovy'
 }
 
+apply plugin: 'cobertura'
 apply plugin: 'groovy'
 
 group = 'de.github.spock.ext'
@@ -22,4 +31,10 @@ dependencies{
     testImplementation 'org.spockframework:spock-core:1.3-groovy-2.5'
     testImplementation 'org.springframework:spring-context:5.3.9'
     testImplementation 'net.bytebuddy:byte-buddy:1.11.12'
+}
+
+cobertura {
+    format = 'html'
+    includes = ['**/*.java', '**/*.groovy']
+    //excludes = ['com/thirdparty/**/*.*']
 }
