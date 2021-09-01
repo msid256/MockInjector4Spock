@@ -1,4 +1,4 @@
-package de.github.spock.ext.tests
+package de.github.spock.ext.tests.example
 
 import org.springframework.beans.factory.annotation.Autowired
 

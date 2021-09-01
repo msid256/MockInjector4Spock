@@ -1,4 +1,4 @@
-package de.github.spock.ext.tests
+package de.github.spock.ext.tests.example
 
 interface TestInterface{
 
