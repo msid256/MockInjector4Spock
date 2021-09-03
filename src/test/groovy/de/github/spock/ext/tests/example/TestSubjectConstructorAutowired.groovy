@@ -2,12 +2,12 @@ package de.github.spock.ext.tests.example
 
 import org.springframework.beans.factory.annotation.Autowired
 
-class TestSubjectWithConstructorInjection{
+class TestSubjectConstructorAutowired{
 
     private TestInterface testInterface
 
     @Autowired
-    TestSubjectWithConstructorInjection( TestInterface testInterface ){
+    TestSubjectConstructorAutowired( TestInterface testInterface ){
         this.testInterface = testInterface
     }
 

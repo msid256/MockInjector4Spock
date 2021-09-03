@@ -3,26 +3,18 @@ package de.github.spock.ext.tests
 import de.github.spock.ext.annotation.InjectMocks
 import de.github.spock.ext.annotation.Mock
 import de.github.spock.ext.tests.example.TestInterface
-import de.github.spock.ext.tests.example.TestSubject
+import de.github.spock.ext.tests.example.TestSubjectConstructorAutowired
 import spock.lang.Specification
 
-class FieldInjectionTestSpec extends Specification{
+class ConstructorAutowiredSpec extends Specification{
 
     @Mock
     private TestInterface testInterface
     @InjectMocks
-    private TestSubject testSubject
+    private TestSubjectConstructorAutowired testSubject
 
-    def setup(){
-    }
-
-    def 'Mock is initialized and not null'(){
-        expect: 'mock is not null'
-        testInterface
-    }
-
-    def 'TestSubject is initialized and hence not null'(){
-        expect: 'testSubject is not null'
+    def 'testSubject is not null'(){
+        expect: 'true'
         testSubject
     }
 
