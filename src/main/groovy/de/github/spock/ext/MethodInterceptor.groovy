@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Qualifier
 import spock.lang.Specification
 import spock.mock.DetachedMockFactory
 
+import javax.annotation.Resource
 import javax.inject.Inject
 import javax.inject.Named
 import java.lang.annotation.Annotation
@@ -33,7 +34,7 @@ class MethodInterceptor extends AbstractMethodInterceptor{
 
     private static final Logger logger = Logger.getLogger( MethodInterceptor.class.getName() )
     private static final Class<? extends Annotation>[] ANNOTATIONS = [
-            Autowired, Inject
+            Autowired, Inject, Resource
     ].toArray( new Class<? extends Annotation>[0] )
 
     @Override
@@ -174,7 +175,8 @@ class MethodInterceptor extends AbstractMethodInterceptor{
                 Closure handleResolvedParams = { String annotation ->
                     MockReference mockReference = referenceHolder.findByQualifier( annotation )
                     if( !mockReference ){
-                        throw new NoSuchBeanDefinitionException( mockReference.type, annotation )
+                        Class<?> firstParamType = declaredMethod.parameterTypes.first()
+                        throw new NoSuchBeanDefinitionException( firstParamType, annotation )
                     }
                     resolvedParams << mockReference.mock
                 }
@@ -184,6 +186,9 @@ class MethodInterceptor extends AbstractMethodInterceptor{
                     handleResolvedParams( declaredMethod.getAnnotation( Qualifier ).value() )
                 } else if( declaredMethod.isAnnotationPresent( Named ) ){
                     handleResolvedParams( declaredMethod.getAnnotation( Named ).value() )
+                } else if( declaredMethod.isAnnotationPresent( Resource ) &&
+                        declaredMethod.getAnnotation( Resource ).name() ){
+                    handleResolvedParams( declaredMethod.getAnnotation( Resource ).name() )
                 } else{
                     resolveParameterBeans( parameterTypes, referenceHolder, resolvedParams )
                 }
@@ -200,9 +205,10 @@ class MethodInterceptor extends AbstractMethodInterceptor{
 
     private static void resolveParameterBeans( Class<?>[] parameterTypes, MockReferenceHolder referenceHolder,
                                                List resolvedParams ){
-        Closure validateAndAddMock = { MockReference mockReference, String qualifier, Class<?> paramType ->
+        Closure handleResolvedParams = { Class<?> paramType, String annotation ->
+            MockReference mockReference = referenceHolder.findByQualifier( annotation )
             if( !mockReference ){
-                throw new NoSuchBeanDefinitionException( paramType, qualifier )
+                throw new NoSuchBeanDefinitionException( paramType, annotation )
             }
             resolvedParams << mockReference.mock
         }
@@ -210,12 +216,19 @@ class MethodInterceptor extends AbstractMethodInterceptor{
         parameterTypes.each{ Class<?> paramType ->
             //Qualifier strategy...
             if( paramType.isAnnotationPresent( Qualifier ) ){
-                String qualifier = paramType.getAnnotation( Qualifier ).value()
-                MockReference mockReference = referenceHolder.findByQualifier( qualifier )
-                validateAndAddMock( mockReference, qualifier, paramType )
+                handleResolvedParams( paramType, paramType.getAnnotation( Qualifier ).value() )
+            } else if( paramType.isAnnotationPresent( Named ) ){
+                handleResolvedParams( paramType, paramType.getAnnotation( Named ).value() )
+            } else if( paramType.isAnnotationPresent( Resource ) &&
+                    paramType.getAnnotation( Resource ).name() ){
+                handleResolvedParams( paramType, paramType.getAnnotation( Resource ).name() )
             } else{
                 MockReference mockReference = referenceHolder.findByType( paramType )
-                validateAndAddMock( mockReference, '', paramType )
+                if( !mockReference ){
+                    throw new NoSuchBeanDefinitionException( paramType, '' )
+                }
+                resolvedParams << mockReference.mock
+
             }
             int typeCount = referenceHolder.countTypes( paramType )
             if( typeCount > 1 ){
@@ -248,6 +261,9 @@ class MethodInterceptor extends AbstractMethodInterceptor{
                     } else if( declaredField.isAnnotationPresent( Named ) ){
                         //Named strategy
                         handleQualifier( declaredField.getAnnotation( Named ).value() )
+                    } else if( declaredField.isAnnotationPresent( Resource ) &&
+                            declaredField.getAnnotation( Resource ).name() ){
+                        handleQualifier( declaredField.getAnnotation( Resource ).name() )
                     }
                 }
             }
