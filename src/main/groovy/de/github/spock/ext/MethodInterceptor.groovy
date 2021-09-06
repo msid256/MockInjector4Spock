@@ -3,6 +3,9 @@ package de.github.spock.ext
 import de.github.spock.ext.annotation.InjectMocks
 import de.github.spock.ext.annotation.Mock
 import de.github.spock.ext.annotation.Stub
+import de.github.spock.ext.exception.NoSuchBeanDefinitionException
+import de.github.spock.ext.exception.NoUniqueBeanDefinitionException
+import de.github.spock.ext.exception.UnresolvedBeansException
 import de.github.spock.ext.mocks.MockReference
 import de.github.spock.ext.mocks.MockReferenceHolder
 import groovy.transform.CompileStatic
@@ -17,6 +20,7 @@ import spock.lang.Specification
 import spock.mock.DetachedMockFactory
 
 import javax.inject.Inject
+import javax.inject.Named
 import java.lang.annotation.Annotation
 import java.lang.reflect.AnnotatedElement
 import java.lang.reflect.Constructor
@@ -82,26 +86,24 @@ class MethodInterceptor extends AbstractMethodInterceptor{
     }
 
     private static <E extends Specification> void injectMocks( SpecInfo specInfo, E target ){
-        Map<Class, Object> mocks = new HashMap<>()
         MockReferenceHolder referenceHolder = new MockReferenceHolder()
 
         MockUtil mockUtil = new MockUtil()
         DetachedMockFactory mockFactory = new DetachedMockFactory()
         List<FieldInfo> targetFields = [ ]
 
+        Closure handleAnnotation = { FieldInfo info, String name ->
+            Object mockObj = mockFactory.Mock( info.type )
+            injectMock( info.reflection, target, mockObj )
+            mockUtil.attachMock( mockObj, target )
+            referenceHolder.addReference( mockObj, name ?: info.name, info.type )
+        }
+
         specInfo.fields.each{ FieldInfo info ->
             if( info.isAnnotationPresent( Mock ) ){
-                Object mockObj = mockFactory.Mock( info.type )
-                injectMock( info.reflection, target, mockObj )
-                mockUtil.attachMock( mockObj, target )
-                mocks.put( info.type, mockObj )
-                referenceHolder.addReference( mockObj, info.name, info.type )
+                handleAnnotation( info, info.getAnnotation( Mock ).name() )
             } else if( info.isAnnotationPresent( Stub ) ){
-                Object stub = mockFactory.Stub( info.type )
-                injectMock( info.reflection, target, stub )
-                mockUtil.attachMock( stub, target )
-                mocks.put( info.type, stub )
-                referenceHolder.addReference( stub, info.name, info.type )
+                handleAnnotation( info, info.getAnnotation( Stub ).name() )
             } else if( info.isAnnotationPresent( InjectMocks ) ){
                 targetFields << info
             }
@@ -119,8 +121,8 @@ class MethodInterceptor extends AbstractMethodInterceptor{
     }
 
     private static void injectMock( Field field, target, Object mockObj ){
-        if( !field.accessible ){
-            field.accessible = true
+        if( !field.trySetAccessible() ){
+            throw new IllegalAccessException( 'No access rights for field "' + field.name + '"' )
         }
         field.set( target, mockObj )
     }
@@ -157,14 +159,7 @@ class MethodInterceptor extends AbstractMethodInterceptor{
         }
         Constructor<?> first = withAnnotations.first()
         List params = [ ]
-        for( Class<?> it : first.parameterTypes ){
-            MockReference reference = referenceHolder.findByType( it )
-            if( reference ){
-                params.add( reference.mock )
-            } else{
-                return false
-            }
-        }
+        resolveParameterBeans( first.parameterTypes, referenceHolder, params )
         Object testSubject = first.newInstance( params.toArray() )
         injectMock( info.reflection, target, testSubject )
         true
@@ -174,43 +169,59 @@ class MethodInterceptor extends AbstractMethodInterceptor{
                                                        testObject ){
         type.getDeclaredMethods().toList().each{ Method declaredMethod ->
             if( areAnnotationsPresent( declaredMethod ) ){
-                List params = [ ]
-                if( declaredMethod.isAnnotationPresent( Qualifier ) ){
-                    Qualifier annotation = declaredMethod.getAnnotation( Qualifier )
-                    MockReference mock = referenceHolder.findByQualifier( annotation.value() )
-                    if( !mock){
-                        //TODO: throw new exception, as no bean could be found
-                    }
-                    params << mock.mock
-                } else{
-                    declaredMethod.parameterTypes.each{ Class<?> paramType ->
-                        //check for annotated params...
-                        //Qualifier strategy...
-                        if( paramType.isAnnotationPresent( Qualifier ) ){
-                            String qualifier = paramType.getAnnotation( Qualifier ).value()
+                List resolvedParams = [ ]
 
-                            MockReference mockReference = referenceHolder.findByQualifier( qualifier )
-                            if( !mockReference){
-                                //TODO: throw new Exception, as there is no bean
-                            }
-                            params << mockReference.mock
-                        }
-                        int typeCount = referenceHolder.countTypes( paramType )
-                        if( typeCount > 1 ){
-                            //TODO: also throw an exception, as there is a unique bean (UniqueBeanDefinitionException)
-                        }
-                        params << referenceHolder.findByType( paramType ).mock
+                Closure handleResolvedParams = { String annotation ->
+                    MockReference mockReference = referenceHolder.findByQualifier( annotation )
+                    if( !mockReference ){
+                        throw new NoSuchBeanDefinitionException( mockReference.type, annotation )
                     }
+                    resolvedParams << mockReference.mock
                 }
-                if( params.size() == declaredMethod.parameterTypes.size() ){
-                    declaredMethod.accessible = true
-                    declaredMethod.invoke( testObject, params.toArray() )
+
+                Class<?>[] parameterTypes = declaredMethod.parameterTypes
+                if( declaredMethod.isAnnotationPresent( Qualifier ) ){
+                    handleResolvedParams( declaredMethod.getAnnotation( Qualifier ).value() )
+                } else if( declaredMethod.isAnnotationPresent( Named ) ){
+                    handleResolvedParams( declaredMethod.getAnnotation( Named ).value() )
                 } else{
-                    //TODO: throw an exception, as setting is not possible
+                    resolveParameterBeans( parameterTypes, referenceHolder, resolvedParams )
+                }
+                if( resolvedParams.size() == parameterTypes.size() ){
+                    declaredMethod.accessible = true
+                    declaredMethod.invoke( testObject, resolvedParams.toArray() )
+                } else{
+                    throw new UnresolvedBeansException()
                 }
             }
         }
 
+    }
+
+    private static void resolveParameterBeans( Class<?>[] parameterTypes, MockReferenceHolder referenceHolder,
+                                               List resolvedParams ){
+        Closure validateAndAddMock = { MockReference mockReference, String qualifier, Class<?> paramType ->
+            if( !mockReference ){
+                throw new NoSuchBeanDefinitionException( paramType, qualifier )
+            }
+            resolvedParams << mockReference.mock
+        }
+
+        parameterTypes.each{ Class<?> paramType ->
+            //Qualifier strategy...
+            if( paramType.isAnnotationPresent( Qualifier ) ){
+                String qualifier = paramType.getAnnotation( Qualifier ).value()
+                MockReference mockReference = referenceHolder.findByQualifier( qualifier )
+                validateAndAddMock( mockReference, qualifier, paramType )
+            } else{
+                MockReference mockReference = referenceHolder.findByType( paramType )
+                validateAndAddMock( mockReference, '', paramType )
+            }
+            int typeCount = referenceHolder.countTypes( paramType )
+            if( typeCount > 1 ){
+                throw new NoUniqueBeanDefinitionException( paramType, typeCount )
+            }
+        }
     }
 
     private static List<Field> callMockInjectionOnEachField( Class<?> type, MockReferenceHolder referenceHolder,
@@ -222,17 +233,22 @@ class MethodInterceptor extends AbstractMethodInterceptor{
                     MockReference reference = referenceHolder.findByType( declaredField.type )
                     injectMock( declaredField, testObject, reference.mock )
                 } else if( typeCount > 1 ){
-                    //Qualifier-Strategy
-                    if( declaredField.isAnnotationPresent( Qualifier ) ){
-                        Qualifier annotation = declaredField.getAnnotation( Qualifier )
-                        String qualifier = annotation.value()
-                        MockReference mockReference = referenceHolder.findByQualifier( qualifier )
-                        if( mockReference ){
-                            injectMock( declaredField, testObject, mockReference.mock )
-                        }
 
+                    Closure handleQualifier = { String qualifier ->
+                        MockReference mockReference = referenceHolder.findByQualifier( qualifier )
+                        if( !mockReference ){
+                            throw new NoSuchBeanDefinitionException( declaredField.type, qualifier )
+                        }
+                        injectMock( declaredField, testObject, mockReference.mock )
                     }
-                    //Named-Strategy
+
+                    if( declaredField.isAnnotationPresent( Qualifier ) ){
+                        //Qualifier strategy
+                        handleQualifier( declaredField.getAnnotation( Qualifier ).value() )
+                    } else if( declaredField.isAnnotationPresent( Named ) ){
+                        //Named strategy
+                        handleQualifier( declaredField.getAnnotation( Named ).value() )
+                    }
                 }
             }
         }
