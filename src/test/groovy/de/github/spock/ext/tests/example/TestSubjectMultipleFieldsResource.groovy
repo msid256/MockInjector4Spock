@@ -2,7 +2,7 @@ package de.github.spock.ext.tests.example
 
 import javax.annotation.Resource
 
-class TestSubjectMultipleFields{
+class TestSubjectMultipleFieldsResource{
 
     @Resource( name = "dasIstEines" )
     private AnotherTestInterface anotherOne

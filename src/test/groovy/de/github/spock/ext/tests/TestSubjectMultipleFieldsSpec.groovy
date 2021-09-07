@@ -3,7 +3,7 @@ package de.github.spock.ext.tests
 import de.github.spock.ext.annotation.InjectMocks
 import de.github.spock.ext.annotation.Mock
 import de.github.spock.ext.tests.example.AnotherTestInterface
-import de.github.spock.ext.tests.example.TestSubjectMultipleFields
+import de.github.spock.ext.tests.example.TestSubjectMultipleFieldsResource
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -14,7 +14,7 @@ class TestSubjectMultipleFieldsSpec extends Specification{
     @Mock( name = 'dasZweite' )
     private AnotherTestInterface mockTwo
     @InjectMocks
-    private TestSubjectMultipleFields multFields
+    private TestSubjectMultipleFieldsResource multFields
 
     def setup(){
     }
