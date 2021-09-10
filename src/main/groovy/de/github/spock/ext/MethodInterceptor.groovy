@@ -200,7 +200,6 @@ class MethodInterceptor extends AbstractMethodInterceptor{
                 }
             }
         }
-
     }
 
     private static void resolveParameterBeans( Class<?>[] parameterTypes, MockReferenceHolder referenceHolder,
@@ -228,7 +227,6 @@ class MethodInterceptor extends AbstractMethodInterceptor{
                     throw new NoSuchBeanDefinitionException( paramType, '' )
                 }
                 resolvedParams << mockReference.mock
-
             }
             int typeCount = referenceHolder.countTypes( paramType )
             if( typeCount > 1 ){
