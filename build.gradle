@@ -7,6 +7,8 @@ plugins{
 
 apply plugin: 'net.saliman.cobertura'
 apply plugin: 'groovy'
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
 
 group = 'io.github.msid256'
 version = '1.0'
@@ -36,7 +38,8 @@ publishing{
             from components.java
             pom{
                 name = 'mockinjector for spock'
-                description = 'Helps you write spock unit testing with annotations of mocks and test subjects'
+                //packaging = 'jar'
+                description = 'A library that helps you write spock unit tests with annotations for mocks and test subjects'
                 url = 'https://github.com/msid256/MockInjector4Spock'
                 licenses{
                     license{
@@ -60,10 +63,13 @@ publishing{
             }
         }
     }
-    repositories {
-        maven {
-            // change to point to your repo, e.g. http://my.org/repo
-            url = layout.buildDirectory.dir(ossrhUrl)
+    repositories{
+        maven{
+            url = 'https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/'
+            credentials{
+                username = ossrhUsername
+                password = ossrhPassword
+            }
         }
     }
 }
@@ -71,5 +77,3 @@ publishing{
 signing{
     sign publishing.publications.mavenJava
 }
-
-
