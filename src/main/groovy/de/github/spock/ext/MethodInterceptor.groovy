@@ -122,8 +122,9 @@ class MethodInterceptor extends AbstractMethodInterceptor{
     }
 
     private static void injectMock( Field field, target, Object mockObj ){
-        if( !field.trySetAccessible() ){
-            throw new IllegalAccessException( 'No access rights for field "' + field.name + '"' )
+        if( !field.accessible ){
+            field.accessible = true
+
         }
         field.set( target, mockObj )
     }
