@@ -1,12 +1,14 @@
 plugins{
     id 'net.saliman.cobertura' version '4.0.0'
     id 'groovy'
+    id 'maven-publish'
+    id 'signing'
 }
 
 apply plugin: 'net.saliman.cobertura'
 apply plugin: 'groovy'
 
-group = 'de.github.spock.ext'
+group = 'io.github.msid256'
 version = '1.0'
 
 sourceCompatibility = 11
@@ -27,5 +29,47 @@ dependencies{
     testImplementation 'net.bytebuddy:byte-buddy:1.11.13'
 }
 
+publishing{
+    publications{
+        mavenJava( MavenPublication ){
+            artifactId = 'mockinjector-spock'
+            from components.java
+            pom{
+                name = 'mockinjector for spock'
+                description = 'Helps you write spock unit testing with annotations of mocks and test subjects'
+                url = 'https://github.com/msid256/MockInjector4Spock'
+                licenses{
+                    license{
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers{
+                    developer{
+                        id = 'msid256'
+                        name = 'Massimiliano Siddi'
+                        email = 'massimiliano22@gmx.net'
+                    }
+                }
+                scm{
+                    connection = 'scm:git:git://github.com/msid256/MockInjector4Spock.git'
+                    developerConnection = 'scm:git:ssh://github.com:msid256/MockInjector4Spock.git'
+                    url = 'https://github.com/msid256/MockInjector4Spock/'
+                }
+
+            }
+        }
+    }
+    repositories {
+        maven {
+            // change to point to your repo, e.g. http://my.org/repo
+            url = layout.buildDirectory.dir(ossrhUrl)
+        }
+    }
+}
+
+signing{
+    sign publishing.publications.mavenJava
+}
 
 
