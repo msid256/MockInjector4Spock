@@ -8,10 +8,10 @@ Easily annotate Mocks and inject them into the class instance under test.
 
 Code written for a containerised environment like spring or wildfly makes usually use of the dependency inversion
 pattern where the dependencies are injected via the container in to the bean. The dependencies within the bean are
-marked by annotations like @Autowired, @Resource or @Inject.
+marked by annotations like **@Autowired**, **@Resource** or **@Inject**.
 
 Tools like Mockito help unit test authors write tests without having to manually inject the mocked dependencies into the
-test subject, i.e. the bean you want to test. You just need to annotate the mock objects with @Mock to let mockito
+test subject, i.e. the bean you want to test. You just need to annotate the mock objects with **@Mock** to let mockito
 generate the mocks. You then just annotate the test subject with @Inject and Mockito will automatically inject all
 needed dependencies.
 
@@ -22,9 +22,9 @@ needed.
 ### Classes to test
 
 The following injection methods (annotations) are currently supported:
-- @Autowired (optionally with @Qualified)
-- @Resource (optionally with name parameter)
-- @Inject (optionally with @Named annotation)
+- **@Autowired** (optionally with **@Qualifier**)
+- **@Resource** (optionally with 'name' value)
+- **@Inject** (optionally with **@Named** annotation)
 
 Field and method annotation as well as constructor injection is supported.
 
@@ -72,7 +72,7 @@ class TestSubjectSpec extends Specification{
 }
 ````
 
-#### 2. The @Qualifier annotation that supports named dependency resolution.
+#### 2. The _@Qualifier_ annotation that supports named dependency resolution.
 
 ```groovy
 ...
@@ -130,13 +130,13 @@ private AnotherTestInterface myMockFirst
 private AnotherTestInterface myMockSecond
 ```
 ####4. @Inject and @Named
-The annotations @Inject and @Named can be dealt with in a similar fashion as @Autowired and @Qualifier, and hence I have
-skipped any example code.
+The annotations **@Inject** and **@Named** can be dealt with in a similar fashion as **@Autowired** and **@Qualifier**, 
+and hence I have skipped any example code.
 
 ## Supported Spock test doubles
 MockInjector4Spock currently supports creating the following types of test doubles:
-- Mocks using @Mock
-- Stubs using @Stub
+- Mocks using **@Mock**
+- Stubs using **@Stub**
 
 Spies are currently not supported.
 
@@ -146,7 +146,7 @@ specified within the specification.
 
 ### Injection of Mocks/Stubs into the class under test
 The bean you want to test doesn't need to be instantiated manually. All you need to do is to declare it as a field and
-annotate it with @InjectMocks. MockInjector4Spock will then do the autowiring and instantiation for you.
+annotate it with **@InjectMocks**. MockInjector4Spock will then do the autowiring and instantiation for you.
 
 ## Include MockInjector4Spock into your project
 
