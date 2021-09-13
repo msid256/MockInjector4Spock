@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Qualifier
 import spock.lang.Specification
 import spock.mock.DetachedMockFactory
 
+import javax.annotation.PostConstruct
 import javax.annotation.Resource
 import javax.inject.Inject
 import javax.inject.Named
@@ -118,13 +119,13 @@ class MethodInterceptor extends AbstractMethodInterceptor{
             if( !defaultConstructorStrategy( info, target, referenceHolder ) ){
                 autowiredConstructorStrategy( info, target, referenceHolder )
             }
+            executePostConstruct( info, target )
         }
     }
 
     private static void injectMock( Field field, target, Object mockObj ){
         if( !field.accessible ){
             field.accessible = true
-
         }
         field.set( target, mockObj )
     }
@@ -278,6 +279,17 @@ class MethodInterceptor extends AbstractMethodInterceptor{
             }
         }
         result
+    }
+
+    private static void executePostConstruct( FieldInfo info, Object specInstance ){
+        Class<?> targetType = info.type
+        targetType.getDeclaredMethods().each{ Method method ->
+            if( method.isAnnotationPresent( PostConstruct ) ){
+                Object instance = info.reflection.get( specInstance )
+                method.accessible = true
+                method.invoke( instance, [ ].toArray() )
+            }
+        }
     }
 
 }
